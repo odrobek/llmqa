@@ -155,4 +155,4 @@ LLMQA/
 
 ## License
 
-TBD
+Open Source (OSI Approved): [MIT License](LICENSE)
