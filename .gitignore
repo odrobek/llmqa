@@ -1,0 +1,8 @@
+# Excluded:
+*.out
+__pycache__/
+*.png
+*.egg-info/
+*.json
+*.in
+dist/
