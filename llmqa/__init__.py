@@ -5,9 +5,12 @@ using large language models.
 """
 
 from .models.rosie_llama import ROSIELlama
-from .models.critique_agent import CritiqueAgent
 from .models.databricks import DatabricksModel
-from .generators.qa_generator import QAGenerator
+from .models.google import GoogleModel
+from .models.openrouter import OpenRouterModel
+from .core.llm_service import LLMService
+from .evaluators import CritiqueEvaluator
+
 
 __version__ = "0.1.0"
-__all__ = ["ROSIELlama", "DatabricksModel", "CritiqueAgent", "QAGenerator"]
+__all__ = ["ROSIELlama", "DatabricksModel", "GoogleModel", "OpenRouterModel", "LLMService", "CritiqueEvaluator"]

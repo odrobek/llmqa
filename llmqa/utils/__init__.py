@@ -3,4 +3,7 @@
 This package contains utility functions and helpers.
 """
 
-# Currently empty, will be populated as utility functions are added 
+
+from .logging_config import setup_logging
+
+__all__ = ['setup_logging']

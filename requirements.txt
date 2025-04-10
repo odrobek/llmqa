@@ -1,2 +1,1 @@
-openai==1.52.0
-pandas==1.2.2
+openai>=1.52.0
