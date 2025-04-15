@@ -1,6 +1,6 @@
 # LLMQA
 
-LLMQA (Large Language Model Question and Answer) is a Python library for generating and evaluating question-answer pairs from text chunks using large language models.
+LLMQA (Large Language Model Question and Answer) is a Python library for generating and evaluating question-answer pairs from text chunks using large language models. It is designed to create custom validation datasets for evaluating RAG LLM systems against base LLMs.
 
 ## Table of Contents
 
@@ -12,60 +12,48 @@ LLMQA (Large Language Model Question and Answer) is a Python library for generat
 
 ## Introduction
 
-LLMQA is designed to generate and evaluate question-answer pairs from chunked text for use in evaluation of RAG LLM systems. The system provides:
+LLMQA provides a unified interface for working with multiple LLM providers and generating high-quality question-answer pairs from chunked text. The system provides:
 
-1. QA Generation: Generates QA pairs from text chunks using LLMs
-2. Quality Evaluation: Evaluates QA pairs using multiple criteria:
-   - Groundedness: How well the question can be answered from the context
-   - Relevance: How useful the question is for the environment in which it would be used
-   - Standalone: How context-independent the question is
-3. Parallel Processing: Efficient processing of large datasets
-4. Quality Filtering: Automatic filtering of low-quality QA pairs
+1. Multi-Provider Support: Work with various LLM providers including:
+   - Databricks
+   - Google
+   - OpenRouter
+   - ROSIE
+
+2. QA Generation: Generate QA pairs from text chunks using the `LLMService` interface
+3. Quality Evaluation: Evaluate QA pairs using the `CritiqueEvaluator` with configurable criteria
+4. LLM Evaluation: Evaluate a model (RAG or not) on generated QA pairs with LLM-as-a-judge techniques to quanitfy performance on individualized validation datasets
 
 ## Installation
 
-### Conda Environment
+### Package Manager
 
-Create the conda environment:
+LLMQA uses `uv` as its package manager. Install the package:
 
 ```bash
-conda env create -f environment.yml
+uv pip install llmqa
 ```
 
 ### Environment Variables
 
-Add the following environment variables to your conda environment:
+The following environment variables are required for each LLM provider you wish to use:
 
 ```bash
-cd <path to conda environment>
-mkdir -p ./etc/conda/activate.d
-mkdir -p ./etc/conda/deactivate.d
-touch ./etc/conda/activate.d/env_vars.sh
-touch ./etc/conda/deactivate.d/env_vars.sh
-```
+# Databricks
+export DATABRICKS_KEY='<your-api-key>'
+export DATABRICKS_URL='<your-endpoint-url>'
 
-In `./etc/conda/activate.d/env_vars.sh`:
-```bash
-#!/bin/sh
+# Google
+export GOOGLE_KEY='<your-api-key>'
+export GOOGLE_URL='<your-endpoint-url>'
 
-export ROSIE_URL='<URL to ROSIE LLM>'
-export ROSIE_KEY='<ROSIE API_KEY>'
-```
+# OpenRouter
+export OPENROUTER_KEY='<your-api-key>'
+export OPENROUTER_URL='<your-endpoint-url>'
 
-In `./etc/conda/deactivate.d/env_vars.sh`:
-```bash
-#!/bin/sh
-
-unset ROSIE_URL
-unset ROSIE_KEY
-```
-
-### Python Dependencies
-
-Install required Python packages:
-
-```bash
-pip install -r requirements.txt
+# ROSIE
+export ROSIE_KEY='<your-api-key>'
+export ROSIE_URL='<your-endpoint-url>'
 ```
 
 ## Usage
@@ -73,51 +61,40 @@ pip install -r requirements.txt
 ### Python API
 
 ```python
-from llmqa import ROSIELlama, QAGenerator, CritiqueAgent
+from llmqa.core.llm_service import LLMService
+from llmqa.models.databricks import DatabricksModel, ROSIELlama
+from llmqa.evaluators.critique import CritiqueEvaluator
 
 # Initialize models
-qa_model = ROSIELlama()
-critique_model = ROSIELlama()
-critique_agent = CritiqueAgent(critique_model)
+gen_model = ROSIELlama()
+critique_model = DatabricksModel()
+evaluator = CritiqueEvaluator(critique_model)
 
-# Create generator with critique
-generator = QAGenerator(
-    model=qa_model,
-    critique_agent=critique_agent,
-    min_critique_score=3.0,
-    critique_criteria=['groundedness', 'relevance', 'standalone']
-)
+# Create LLM service
+service = LLMService(model=gen_model, evaluator=evaluator)
 
 # Generate and evaluate QA pairs
-qa_pairs = generator.generate_from_file(
-    input_file="chunks/input.csv",
-    output_file="output.json"
+text_chunk = "Your text chunk here..."
+qa_pairs = service.generate_qa(
+    text_chunk=text_chunk,
+    with_critique=True,
+    criteria=['groundedness', 'relevance', 'standalone'] #TODO fix criteria example
 )
 ```
 
-### Batch Processing
+### Logging Configuration
 
-1. Use the template batch script:
-```bash
-cp scripts/batch_llmqa.sh scripts/examples/my_job.sh
-```
+LLMQA provides a comprehensive logging system for debugging and monitoring:
 
-2. Edit the configuration:
-```bash
-INPUT_FILE="path/to/chunks.csv"
-OUTPUT_FILE="path/to/output.json"
-```
+```python
+from llmqa.utils.logging_config import setup_logging
 
-3. Submit the job:
-```bash
-sbatch scripts/examples/my_job.sh
-```
+# Set up logging with debug level
+logger = setup_logging(level=logging.DEBUG, verbose=True)
 
-### Debugging
-
-For testing and debugging, use the debug script:
-```bash
-python -m tests.debug_qa_critique
+# Use the logger in your code
+logger.debug("Debug message")
+logger.info("Info message")
 ```
 
 ## Directory Structure
@@ -126,31 +103,24 @@ python -m tests.debug_qa_critique
 LLMQA/
 ├── llmqa/                      # Main package directory
 │   ├── __init__.py            # Package initialization
+│   ├── core/                  # Core functionality
+│   │   └── llm_service.py     # Main LLM service interface
 │   ├── models/                # LLM model implementations
 │   │   ├── __init__.py
 │   │   ├── base.py           # Base model class
-│   │   ├── rosie_llama.py    # ROSIE implementation
-│   │   └── critique_agent.py  # QA evaluation agent
-│   ├── generators/           # QA generation implementations
+│   │   ├── databricks.py     # Databricks implementation
+│   │   ├── google.py         # Google implementation
+│   │   ├── openrouter.py     # OpenRouter implementation
+│   │   └── rosie_llama.py    # ROSIE implementation
+│   ├── evaluators/           # Evaluation implementations
 │   │   ├── __init__.py
-│   │   └── qa_generator.py   # QA generation logic
+│   │   └── critique.py       # Critique evaluation logic
 │   └── utils/                # Utility functions
-│       └── __init__.py
-├── scripts/                  # Batch job scripts
-│   ├── batch_llmqa.sh       # Template batch script
-│   └── examples/            # Example job scripts
-│       └── os_jl_llmqa.sh   # Operating Systems course script
-├── tests/                   # Test files
-│   ├── test_critique_agent.py
-│   ├── test_qa_generator.py
-│   ├── test_rosie_llama.py
-│   └── debug_qa_critique.py # Debug script for testing
-├── chunks/                  # Text chunk data
-│   └── opsys_chunks.csv    # Operating Systems course chunks
-├── environment.yml          # Conda environment
-├── requirements.txt         # Python dependencies
-├── setup.py                # Package setup file
-└── README.md               # Documentation
+│       └── logging_config.py # Logging configuration
+├── tests/                    # Test files
+├── pyproject.toml           # Project configuration
+├── uv.lock                  # Package lock file
+└── README.md                # Documentation
 ```
 
 ## License
