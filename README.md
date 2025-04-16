@@ -28,11 +28,8 @@ LLMQA provides a unified interface for working with multiple LLM providers and g
 
 ### Package Manager
 
-LLMQA uses `uv` as its package manager. Install the package:
-
-```bash
-uv pip install llmqa
-```
+LLMQA uses `uv` as its package manager. It is currently only available on TestPyPI in pre-release form. This will be updated
+when it is available on PyPI.
 
 ### Environment Variables
 
