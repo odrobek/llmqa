@@ -48,11 +48,14 @@ class ROSIELlama(BaseModel):
         ]
         logger.debug("ROSIE Llama model initialized successfully")
 
-    def __call__(self, message: str) -> str:
+    def __call__(self, message: str, max_tokens: int = 2048, temperature: float = 0.9, stream: bool = False) -> str:
         """Process a message using the ROSIE Llama model.
 
         Args:
             message (str): The message to process
+            max_tokens (int, optional): The maximum number of tokens to generate. Defaults to 2048.
+            temperature (float, optional): The temperature to use for the model. Defaults to 0.9.
+            stream (bool, optional): Whether to stream the response. Defaults to False. Recommended to not change.
 
         Returns:
             str: The model's response
@@ -64,9 +67,9 @@ class ROSIELlama(BaseModel):
             completion = self.client.chat.completions.create(
                 model="meta/llama-3.3-70b-instruct",
                 messages=messages,
-                max_tokens=2048,
-                temperature=0.9,
-                stream=False
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=stream
             )
             logger.debug("Successfully received response from ROSIE Llama API")
             return completion.choices[0].message.content 

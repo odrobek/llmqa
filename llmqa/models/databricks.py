@@ -68,11 +68,14 @@ class DatabricksModel(BaseModel):
         ]
         logger.debug("Databricks model initialized successfully")
 
-    def __call__(self, message: str) -> str:
+    def __call__(self, message: str, max_tokens: int = 1024, temperature: float = 0.5, stream: bool = False) -> str:
         """Process a message using the Databricks model.
 
         Args:
             message (str): The message to process
+            max_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
+            temperature (float, optional): The temperature to use for the model. Defaults to 0.5.
+            stream (bool, optional): Whether to stream the response. Defaults to False. Recommended to not change.
 
         Returns:
             str: The model's response
@@ -83,9 +86,9 @@ class DatabricksModel(BaseModel):
             completion = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
-                max_tokens=1024,
-                temperature=0.5,
-                stream=False
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=stream
             )
             logger.debug("Successfully received response from Databricks API")
             return completion.choices[0].message.content

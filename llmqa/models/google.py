@@ -64,11 +64,15 @@ class GoogleModel(BaseModel):
         ]
         logger.debug("Google model initialized successfully")
 
-    def __call__(self, message: str) -> str:
+    def __call__(self, message: str, max_tokens: int = 1024, temperature: float = 0.5, stream: bool = False) -> str:
         """Process a message using the Google model.
 
         Args:
             message (str): The message to process
+            max_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
+            temperature (float, optional): The temperature to use for the model. Defaults to 0.5.
+            stream (bool, optional): Whether to stream the response. Defaults to False. Recommended to not change.
+
 
         Returns:
             str: The model's response
@@ -81,8 +85,8 @@ class GoogleModel(BaseModel):
                 contents=[message],
                 config=types.GenerateContentConfig(
                     system_instruction=self.prompt[0]["content"],
-                    temperature=0.7,
-                    max_output_tokens=1024,
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
                 )
             )
             logger.debug("Successfully received response from Google API")
