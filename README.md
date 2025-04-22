@@ -19,6 +19,7 @@ LLMQA provides a unified interface for working with multiple LLM providers and g
    - Google
    - OpenRouter
    - ROSIE
+   - (in the future) Groq
 
 2. QA Generation: Generate QA pairs from text chunks using the `LLMService` interface
 3. Quality Evaluation: Evaluate QA pairs using the `CritiqueEvaluator` with configurable criteria

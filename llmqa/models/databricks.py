@@ -25,14 +25,13 @@ class DatabricksModel(BaseModel):
         "databricks-meta-llama-3-1-70b-instruct",
         "databricks-mixtral-8x7b-instruct",
         "agents_poc_mosaic_sd_catalog-course_chunks-beta_model_v6"
-        # Add more models as they become available
     ]
 
     
     def __init__(self, 
                  model_name: str = "databricks-dbrx-instruct",
                  system_prompt: str = None,
-                 base_url: str = "https://dbc-e66ac7b6-520c.cloud.databricks.com/serving-endpoints"):
+                 base_url: str = None):
         """Initialize the Databricks model.
         
         Args:

@@ -4,7 +4,7 @@ This module provides functionality for evaluating the quality of generated
 question-answer pairs using various criteria.
 """
 
-from typing import Dict, Optional, List, Any
+from typing import Dict, List, Any
 from llmqa.models.base import BaseModel
 import json
 import logging
@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger('llmqa')
 
 class CritiqueEvaluator:
-    """Agent for evaluating question-answer pairs using configurable criteria."""
+    """Class for evaluating question-answer pairs using configurable criteria with LLM-as-a-judge."""
     
     def __init__(self, model: BaseModel, criteria: List[Dict[str, Any]] = None):
         """Initialize the critique agent.
@@ -73,32 +73,44 @@ class CritiqueEvaluator:
         
         # Evaluate each enabled criterion
         for criterion in enabled_criteria:
-            try:
-                # Prepare parameters based on what the criterion needs
-                params = {
-                    "question": question,
-                    "context": context,
-                    "answer": answer
-                }
-                
-                # Only include parameters that the criterion expects
-                required_params = criterion.get("parameters", [])
-                formatted_params = {k: v for k, v in params.items() if k in required_params}
-                
-                # Format the prompt template with the required parameters
-                prompt = criterion["prompt_template"].format(**formatted_params)
-                
-                # Get and parse the model's response
-                response = self.model(prompt)
-                critiques[criterion["name"]] = self._parse_critique(response)
-                logger.debug("Successfully evaluated criterion: %s", criterion["name"])
-                
-            except Exception as e:
-                logger.error("Error evaluating criterion %s: %s", criterion["name"], str(e))
-                critiques[criterion["name"]] = {
-                    "evaluation": f"Error: {str(e)}",
-                    "rating": 1.0  # Default to lowest rating on error
-                }
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Prepare parameters based on what the criterion needs
+                    params = {
+                        "question": question,
+                        "context": context,
+                        "answer": answer
+                    }
+                    
+                    # Only include parameters that the criterion expects
+                    required_params = criterion.get("parameters", [])
+                    formatted_params = {k: v for k, v in params.items() if k in required_params}
+                    
+                    # Format the prompt template with the required parameters
+                    prompt = criterion["prompt_template"].format(**formatted_params)
+                    
+                    # Get and parse the model's response
+                    response = self.model(prompt)
+                    critiques[criterion["name"]] = self._parse_critique(response)
+                    logger.debug("Successfully evaluated criterion: %s on attempt %d", criterion["name"], attempt + 1)
+                    # Break the retry loop if successful
+                    break 
+                    
+                except Exception as e:
+                    logger.warning(
+                        "Attempt %d/%d failed for criterion %s: %s",
+                        attempt + 1, max_retries, criterion["name"], str(e)
+                    )
+                    if attempt + 1 == max_retries:
+                        logger.error(
+                            "All %d attempts failed for criterion %s. Assigning error critique.", 
+                            max_retries, criterion["name"]
+                        )
+                        critiques[criterion["name"]] = {
+                            "evaluation": f"Error after {max_retries} attempts: {str(e)}",
+                            "rating": 1.0  # Default to lowest rating on error
+                        }
         
         # Calculate aggregate score from all critiques
         ratings = [c["rating"] for c in critiques.values()]

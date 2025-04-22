@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmqa" 
-version = "0.0.a1" 
+version = "0.0.a1.dev2" 
 description = "Large Language Model Question and Answer Generation"
 authors = [{ name = "Olek Drobek", email = "drobeka@msoe.edu" }]
 license = {text = "MIT"}  # TODO Need to add LICENSE file and change this
@@ -21,7 +21,8 @@ classifiers = [
 
 dependencies = [
     "openai>=1.52.0",
-    "google-genai>=1.10.0"
+    "google-genai>=1.10.0",
+    "paramiko>=3.5.1",
 ]
 
 [project.urls]

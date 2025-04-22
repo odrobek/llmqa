@@ -21,22 +21,23 @@ class GoogleModel(BaseModel):
     """
     
     AVAILABLE_MODELS = [
-        "gemini-2.0-flash-exp",
+        "gemini-2.5-flash-preview-04-17",
+        "gemini-2.5-pro-exp-03-25",
         "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
         "gemini-1.5-pro",
-        "gemini-2.0-flash-lite"
     ]
     
     def __init__(self, 
-                 model_name: str = "gemini-1.5-flash",
+                 model_name: str = "gemini-2.0-flash",
                  system_prompt: str = None,
                  base_url: str = "not_used"):
         """Initialize the Google model.
         
         Args:
-            model_name (str, optional): Name of the model to use. Defaults to "gemini-1.5-flash".
+            model_name (str, optional): Name of the model to use. Defaults to "gemini-2.0-flash".
             system_prompt (str, optional): Custom system prompt. If None, uses default.
             base_url (str, optional): Custom base URL for the Google endpoint. 
                                     If None, uses environment variable.

@@ -52,9 +52,11 @@ class LLMService:
         The question-answer pair should be in the form of a list of dictionaries, where each dictionary contains a question and an answer.
         The question should have substance to it, be relevant to the text chunk, and should NOT be answerable with a simple word or phrase.
 
-        The answer should be found in the given text chunk. The question should be one that a student might ask a professor and the answer should be helpful to the student.
+        The question should be one that a student might ask a professor in a college course. The answer should be able to be found in the given
+        text chunk, and ideally follow a similar grammar and style to the text chunk. The question and answer pair will be evaluated
+        based on arbritrary criteria (such as but not limited to: groundedness, relevance, accuracy) after generation. 
 
-        Provide your answers strictly as valid JSON with no extra commentary. 
+        Provide your answers strictly as valid JSON with no extra commentary following the JSON: at the bottom of this prompt.
         Your response should start with [ and end with ], and the ONE question and answer pair should have the following format:
         'question': <question>, 'answer': <answer> as a dictionary.
 
@@ -88,7 +90,7 @@ class LLMService:
         
         # If evaluation is requested, use the evaluator.
         if with_critique and self.evaluator:
-            logger.debug("Starting critique evaluation for %d QA pairs", len(qa_pairs))
+            logger.debug("Starting critique evaluation for %d QA pair", len(qa_pairs))
             for i, pair in enumerate(qa_pairs):
                 if cancel_event and cancel_event.is_set():
                     logger.debug("QA generation cancelled during critique evaluation")
