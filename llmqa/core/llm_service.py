@@ -29,7 +29,7 @@ class LLMService:
                     evaluator.__class__.__name__ if evaluator else None)
 
 
-    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[str]] = None, cancel_event: Optional[threading.Event] = None) -> List[Dict[str, Any]]:
+    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         Generate question-answer pairs from a text chunk.
         
@@ -42,9 +42,6 @@ class LLMService:
             A list of QA pairs, optionally augmented with critique-evaluation data.
         """
         logger.debug("Starting QA generation for text chunk (length: %d)", len(text_chunk))
-        if cancel_event and cancel_event.is_set():
-            logger.debug("QA generation cancelled before starting")
-            return []
 
         GENQA_PROMPT = """
         You are a helpful assistant that generates ONE AND ONLY ONE question-answer pair from the given text chunk.
@@ -70,10 +67,6 @@ class LLMService:
         logger.debug("Sending API request to model for QA generation")
         response = self.model(prompt)
         
-        if cancel_event and cancel_event.is_set():
-            logger.debug("QA generation cancelled after model response")
-            return []
-        
         try:
             # Attempt to clean the response, e.g., remove backticks if present
             cleaned_response = response.strip().strip("```json").strip("```")
@@ -92,10 +85,6 @@ class LLMService:
         if with_critique and self.evaluator:
             logger.debug("Starting critique evaluation for %d QA pair", len(qa_pairs))
             for i, pair in enumerate(qa_pairs):
-                if cancel_event and cancel_event.is_set():
-                    logger.debug("QA generation cancelled during critique evaluation")
-                    return qa_pairs[:i]
-    
                 logger.debug("Evaluating QA pair %d/%d", i+1, len(qa_pairs))
 
                 critiques = self.evaluator.evaluate_qa_pair(
@@ -109,3 +98,66 @@ class LLMService:
                 
             logger.debug("Completed critique evaluation for all QA pairs")
         return qa_pairs
+
+    def generate_and_evaluate_answer(
+        self,
+        question: str,
+        context: str,
+        ground_truth_answer: str,
+    ) -> Dict[str, Any]:
+        """
+        Generates an answer using the model based only on the question, then evaluates it
+        against the ground truth answer and context using the evaluator.
+
+        Args:
+            question (str): The question to ask the generation model.
+            context (str): The context used for evaluation.
+            ground_truth_answer (str): The reference answer for evaluation.
+
+        Returns:
+            A dictionary containing the question, generated answer, ground truth,
+            critiques, and aggregate score.
+        """
+        logger.debug("Starting answer generation for question: '%s'", question)
+
+        # 1. Generate answer using the model with only the question
+        # Per user request, the prompt is just the question itself
+        generation_prompt = question 
+        logger.debug("Sending request to generation model")
+        generated_answer = self.model(generation_prompt)
+        logger.debug("Received generated answer (length: %d)", len(generated_answer))
+
+        # 2. Evaluate the generated answer if an evaluator is available
+        critiques = {}
+        aggregate_score = None
+
+        if self.evaluator:
+            logger.debug("Starting evaluation of generated answer using evaluator")
+            try:
+                evaluation_results = self.evaluator.evaluate_generated_answer(
+                    question=question,
+                    context=context,
+                    generated_answer=generated_answer,
+                    ground_truth_answer=ground_truth_answer
+                )
+                critiques = evaluation_results.get('critiques', {})
+                aggregate_score = evaluation_results.get('aggregate_score')
+                logger.debug("Completed evaluation of generated answer")
+            except Exception as e:
+                logger.error("Failed during generated answer evaluation: %s", str(e), exc_info=True)
+                # Optionally, populate critiques with error information
+                critiques = {"evaluation_error": {"evaluation": str(e), "rating": 1.0}}
+                aggregate_score = 1.0 # Assign lowest score on error
+        else:
+            logger.warning("No evaluator configured. Skipping evaluation of generated answer.")
+
+        # 3. Format and return results
+        result = {
+            'question': question,
+            'generated_answer': generated_answer,
+            'ground_truth_answer': ground_truth_answer,
+            'critiques': critiques,
+            'aggregate_score': aggregate_score
+        }
+
+        return result
