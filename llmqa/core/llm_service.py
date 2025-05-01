@@ -29,14 +29,16 @@ class LLMService:
                     evaluator.__class__.__name__ if evaluator else None)
 
 
-    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
         """
         Generate question-answer pairs from a text chunk.
         
         Args:
             text_chunk (str): The input text.
             with_critique (bool): Whether to run evaluation/critique on the generated pairs.
-            criteria (List[str], optional): Specific evaluation criteria.
+            criteria (Optional[List[Dict[str, Any]]]): List of criteria configurations to use for evaluation.
+                 Required if `with_critique` is True. Each dict should have 'name',
+                 'prompt_template', and optionally 'parameters'.
             
         Returns:
             A list of QA pairs, optionally augmented with critique-evaluation data.
@@ -83,14 +85,21 @@ class LLMService:
         
         # If evaluation is requested, use the evaluator.
         if with_critique and self.evaluator:
-            logger.debug("Starting critique evaluation for %d QA pair", len(qa_pairs))
+            # Check if criteria were provided when critique is requested
+            if not criteria:
+                logger.error("Critique requested but no criteria provided.")
+                raise ValueError("Criteria must be provided when 'with_critique' is True.")
+            
+            logger.debug("Starting critique evaluation for %d QA pair with %d criteria", len(qa_pairs), len(criteria))
             for i, pair in enumerate(qa_pairs):
                 logger.debug("Evaluating QA pair %d/%d", i+1, len(qa_pairs))
 
+                # Pass the criteria list to the evaluator
                 critiques = self.evaluator.evaluate_qa_pair(
                     question=pair.get('question'),
                     context=text_chunk,
                     answer=pair.get('answer'),
+                    criteria=criteria # Pass criteria here
                 )
 
                 pair['critiques'] = critiques['critiques']
@@ -104,6 +113,8 @@ class LLMService:
         question: str,
         context: str,
         ground_truth_answer: str,
+        criteria: Optional[List[Dict[str, Any]]] = None,
+        course_uuid: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generates an answer using the model based only on the question, then evaluates it
@@ -113,6 +124,8 @@ class LLMService:
             question (str): The question to ask the generation model.
             context (str): The context used for evaluation.
             ground_truth_answer (str): The reference answer for evaluation.
+            criteria (Optional[List[Dict[str, Any]]]): Optional list of criteria configurations
+                 for the evaluator. If None, the evaluator's default logic is used.
 
         Returns:
             A dictionary containing the question, generated answer, ground truth,
@@ -122,9 +135,13 @@ class LLMService:
 
         # 1. Generate answer using the model with only the question
         # Per user request, the prompt is just the question itself
+        course_uuid = course_uuid if course_uuid else None
         generation_prompt = question 
         logger.debug("Sending request to generation model")
-        generated_answer = self.model(generation_prompt)
+        if course_uuid:
+            generated_answer = self.model(generation_prompt, course_uuid=course_uuid)
+        else:
+            generated_answer = self.model(generation_prompt)
         logger.debug("Received generated answer (length: %d)", len(generated_answer))
 
         # 2. Evaluate the generated answer if an evaluator is available
@@ -134,11 +151,13 @@ class LLMService:
         if self.evaluator:
             logger.debug("Starting evaluation of generated answer using evaluator")
             try:
+                # Pass criteria to the evaluator method
                 evaluation_results = self.evaluator.evaluate_generated_answer(
                     question=question,
                     context=context,
                     generated_answer=generated_answer,
-                    ground_truth_answer=ground_truth_answer
+                    ground_truth_answer=ground_truth_answer,
+                    criteria=criteria # Pass criteria here
                 )
                 critiques = evaluation_results.get('critiques', {})
                 aggregate_score = evaluation_results.get('aggregate_score')

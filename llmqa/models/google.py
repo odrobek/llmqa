@@ -33,6 +33,7 @@ class GoogleModel(BaseModel):
     def __init__(self, 
                  model_name: str = "gemini-2.0-flash",
                  system_prompt: str = None,
+                 api_key: str = None,
                  base_url: str = "not_used"):
         """Initialize the Google model.
         
@@ -42,10 +43,10 @@ class GoogleModel(BaseModel):
             base_url (str, optional): Custom base URL for the Google endpoint. 
                                     If None, uses environment variable.
         """
-        token = os.getenv("GOOGLE_KEY")
+        api_key = api_key or os.getenv("GOOGLE_KEY")
         base_url = base_url or os.getenv("GOOGLE_URL")
         
-        if not token or not base_url:
+        if not api_key or not base_url:
             logger.error("Missing required environment variables: GOOGLE_KEY and/or GOOGLE_URL")
             raise ValueError("GOOGLE_KEY and GOOGLE_URL environment variables must be set")
             
@@ -56,7 +57,7 @@ class GoogleModel(BaseModel):
         
         self.model_name = model_name
         logger.debug("Initializing Google model with base_url: %s, model: %s", base_url, model_name)
-        self.client = genai.Client(api_key=token)
+        self.client = genai.Client(api_key=api_key)
 
         default_prompt = """You are a helpful assistant that does everything asked of you."""
 

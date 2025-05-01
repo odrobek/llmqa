@@ -21,30 +21,32 @@ class DatabricksModel(BaseModel):
     """
     
     AVAILABLE_MODELS = [
-        "databricks-dbrx-instruct",
-        "databricks-meta-llama-3-1-70b-instruct",
-        "databricks-mixtral-8x7b-instruct",
-        "agents_poc_mosaic_sd_catalog-course_chunks-beta_model_v6"
+        "databricks-meta-llama-3-3-70b-instruct",
+        "databricks-meta-llama-3-1-8b-instruct",
+        "databricks-claude-3-7-sonnet",
+        "databricks-llama-4-maverick",
+        "agents_poc_mosaic_sd_catalog-course_chunks-beta_model_v7"
     ]
 
     
     def __init__(self, 
-                 model_name: str = "databricks-dbrx-instruct",
+                 model_name: str = "databricks-meta-llama-3-3-70b-instruct",
                  system_prompt: str = None,
+                 api_key: str = None,
                  base_url: str = None):
         """Initialize the Databricks model.
         
         Args:
-            model_name (str, optional): Name of the model to use. Defaults to "databricks-dbrx-instruct".
+            model_name (str, optional): Name of the model to use. Defaults to "databricks-meta-llama-3-3-70b-instruct".
             system_prompt (str, optional): Custom system prompt. If None, uses default.
             base_url (str, optional): Custom base URL for the Databricks endpoint. 
                                     If None, uses environment variable.
         """
-        token = os.getenv("DATABRICKS_KEY")
+        api_key = api_key or os.getenv("DATABRICKS_KEY")
         base_url = base_url or os.getenv("DATABRICKS_URL")
 
         
-        if not token or not base_url:
+        if not api_key or not base_url:
             logger.error("Missing required environment variables: DATABRICKS_KEY and/or DATABRICKS_URL")
             raise ValueError("DATABRICKS_KEY and DATABRICKS_URL environment variables must be set")
             
@@ -57,7 +59,7 @@ class DatabricksModel(BaseModel):
         logger.debug("Initializing Databricks model with base_url: %s, model: %s", base_url, model_name)
         self.client = OpenAI(
             base_url=base_url,
-            api_key=token
+            api_key=api_key
         )
 
         default_prompt = """You are a helpful assistant that does everything asked of you."""
@@ -67,7 +69,7 @@ class DatabricksModel(BaseModel):
         ]
         logger.debug("Databricks model initialized successfully")
 
-    def __call__(self, message: str, max_tokens: int = 1024, temperature: float = 0.5, stream: bool = False) -> str:
+    def __call__(self, message: str, max_tokens: int = 1024, temperature: float = 0.5, stream: bool = False, course_uuid: str = None) -> str:
         """Process a message using the Databricks model.
 
         Args:
@@ -87,8 +89,10 @@ class DatabricksModel(BaseModel):
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
-                stream=stream
+                stream=stream,
+                extra_body={"course_uuid": course_uuid, "deprecated_column0": "na"}
             )
+            logger.debug("Response from Databricks API: %s", completion)
             logger.debug("Successfully received response from Databricks API")
             return completion.choices[0].message.content
         except Exception as e:

@@ -33,6 +33,7 @@ class OpenRouterModel(BaseModel):
     def __init__(self, 
                  model_name: str = "deepseek/deepseek-chat-v3-0324:free",
                  system_prompt: str = None,
+                 api_key: str = None,
                  base_url: str = "https://openrouter.ai/api/v1"):
         """Initialize the OpenRouter model.
         
@@ -42,11 +43,11 @@ class OpenRouterModel(BaseModel):
             base_url (str, optional): Custom base URL for the OpenRouter endpoint. 
                                     If None, uses environment variable.
         """
-        token = os.getenv("OPENROUTER_KEY")
+        api_key = api_key or os.getenv("OPENROUTER_KEY")
         base_url = base_url or os.getenv("OPENROUTER_URL")
 
         
-        if not token or not base_url:
+        if not api_key or not base_url:
             logger.error("Missing required environment variables: OPENROUTER_KEY and/or OPENROUTER_URL")
             raise ValueError("OPENROUTER_KEY and OPENROUTER_URL environment variables must be set")
             
@@ -59,7 +60,7 @@ class OpenRouterModel(BaseModel):
         logger.debug("Initializing OpenRouter model with base_url: %s, model: %s", base_url, model_name)
         self.client = OpenAI(
             base_url=base_url,
-            api_key=token
+            api_key=api_key
         )
 
         default_prompt = """You are a helpful assistant that does everything asked of you."""

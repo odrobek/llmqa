@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmqa" 
-version = "0.0.a1.dev4" 
+version = "0.0.a1.dev11" 
 description = "Large Language Model Question and Answer Generation"
 authors = [{ name = "Olek Drobek", email = "drobeka@msoe.edu" }]
 license = {text = "MIT"}  # TODO Need to add LICENSE file and change this

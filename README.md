@@ -18,8 +18,7 @@ LLMQA provides a unified interface for working with multiple LLM providers and g
    - Databricks
    - Google
    - OpenRouter
-   - ROSIE
-   - (in the future) Groq
+   - ROSIE at MSOE
 
 2. QA Generation: Generate QA pairs from text chunks using the `LLMService` interface
 3. Quality Evaluation: Evaluate QA pairs using the `CritiqueEvaluator` with configurable criteria
@@ -29,8 +28,7 @@ LLMQA provides a unified interface for working with multiple LLM providers and g
 
 ### Package Manager
 
-LLMQA uses `uv` as its package manager. It is currently only available on TestPyPI in pre-release form. This will be updated
-when it is available on PyPI.
+LLMQA uses `uv` as its package manager. It is currently only available on TestPyPI in pre-release form. This will be updated when it is available on PyPI.
 
 ### Environment Variables
 
@@ -54,6 +52,8 @@ export ROSIE_KEY='<your-api-key>'
 export ROSIE_URL='<your-endpoint-url>'
 ```
 
+Instead of environment variables, they can also be passed in at model instantiation as part of the constructor.
+
 ## Usage
 
 ### Python API
@@ -64,8 +64,8 @@ from llmqa.models.databricks import DatabricksModel, ROSIELlama
 from llmqa.evaluators.critique import CritiqueEvaluator
 
 # Initialize models
-gen_model = ROSIELlama()
-critique_model = DatabricksModel()
+gen_model = ROSIELlama(api_key="secrets", ssh_username="secrets", ssh_password="secrets")
+critique_model = DatabricksModel(api_key="secrets", base_url="secrets")
 evaluator = CritiqueEvaluator(critique_model)
 
 # Create LLM service
@@ -115,10 +115,11 @@ LLMQA/
 │   │   └── critique.py       # Critique evaluation logic
 │   └── utils/                # Utility functions
 │       └── logging_config.py # Logging configuration
-├── tests/                    # Test files
+├── tests/                    # Test files...
 ├── pyproject.toml           # Project configuration
 ├── uv.lock                  # Package lock file
-└── README.md                # Documentation
+├── requirements.txt         # Package requirements
+└── README.md                
 ```
 
 ## License

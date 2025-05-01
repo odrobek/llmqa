@@ -436,7 +436,7 @@ wheels = [
 
 [[package]]
 name = "llmqa"
-version = "0.0a1.dev3"
+version = "0.0a1.dev11"
 source = { editable = "." }
 dependencies = [
     { name = "google-genai" },
