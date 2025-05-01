@@ -29,7 +29,8 @@ class LLMService:
                     evaluator.__class__.__name__ if evaluator else None)
 
 
-    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    def generate_qa(self, text_chunk: str, with_critique: bool = False, criteria: Optional[List[Dict[str, Any]]] = None, 
+                    gen_prompt: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Generate question-answer pairs from a text chunk.
         
@@ -45,21 +46,25 @@ class LLMService:
         """
         logger.debug("Starting QA generation for text chunk (length: %d)", len(text_chunk))
 
-        GENQA_PROMPT = """
+        GENQA_PROMPT = gen_prompt if gen_prompt else """
         You are a helpful assistant that generates ONE AND ONLY ONE question-answer pair from the given text chunk.
-        The text chunk is a section of a larger text, and the question-answer pair should be relevant to the text chunk.
-        The question-answer pair should be in the form of a list of dictionaries, where each dictionary contains a question and an answer.
-        The question should have substance to it, be relevant to the text chunk, and should NOT be answerable with a simple word or phrase.
+        Your purpose is to help generate an individualized validation dataset for a given educational course. This will be used to evaluate the specificity of
+        models on the course content, and the models evaluated will range from RAG to general-purpose LLMs.
+
+        The text chunk is a section of a larger text which might be class notes, transcripts, a textbook, etc. The question-answer pair you generate MUST be relevant to the text chunk.
+        The question MUST have substance to it, be relevant to the text chunk, and should NOT be answerable with a simple word or phrase.
 
         The question should be one that a student might ask a professor in a college course. The answer should be able to be found in the given
-        text chunk, and ideally follow a similar grammar and style to the text chunk. The question and answer pair will be evaluated
+        text chunk, and follow a similar grammar and style to the text chunk. The question and answer pair will be evaluated
         based on arbritrary criteria (such as but not limited to: groundedness, relevance, accuracy) after generation. 
+        Questions should be specific to course content, and should not be contingent on knowing about some external context (for example, do NOT mention "from the passage" or "from the text").
+        Additionally, questions must not be about individual specific assignments, projects, or dates/locations.
 
-        Provide your answers strictly as valid JSON with no extra commentary following the JSON: at the bottom of this prompt.
-        Your response should start with [ and end with ], and the ONE question and answer pair should have the following format:
-        'question': <question>, 'answer': <answer> as a dictionary.
 
-        Here is the text chunk:
+        Provide your output strictly as valid JSON with no extra commentary following the JSON: at the bottom of this prompt.
+        The valid JSON should have two keys- "question" and "answer". These keys should be a dictionary (the valid JSON).
+
+        Now here is the text chunk:
         {text_chunk}
 
         JSON:"""
@@ -70,10 +75,11 @@ class LLMService:
         response = self.model(prompt)
         
         try:
-            # Attempt to clean the response, e.g., remove backticks if present
+            # Attempt to clean the response, remove backticks if present
             cleaned_response = response.strip().strip("```json").strip("```")
             # Parse the JSON
             qa_pairs = ast.literal_eval(cleaned_response)
+            qa_pairs = [qa_pairs]
             logger.debug("Successfully parsed %d QA pairs from model response", len(qa_pairs))
         except Exception as e:
             logger.error("Failed to parse model response: %s", str(e))
